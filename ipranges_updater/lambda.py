@@ -73,6 +73,8 @@ def select_prefixes(ip_ranges_url, select):
     prefixes = _pfx
     print("SELECTED: %d prefixes" % len(prefixes))
 
+    return prefixes
+
 def lambda_handler(event, context):
     try:
         select_str = os.environ['SELECT']
