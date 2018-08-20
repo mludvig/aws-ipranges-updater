@@ -6,6 +6,7 @@
 import os
 import sys
 import json
+import boto3
 from httplib2 import Http
 
 ip_ranges_url = "https://ip-ranges.amazonaws.com/ip-ranges.json"
@@ -71,9 +72,30 @@ def select_prefixes(ip_ranges_url, select):
                     if prefix['rgn'] == region and service in prefix['svc']:
                         _pfx.append(prefix)
     prefixes = _pfx
-    print("SELECTED: %d prefixes" % len(prefixes))
 
     return prefixes
+
+def update_routes(route_table_id, prefixes, target):
+    ec2 = boto3.resource('ec2')
+    route_table = ec2.RouteTable(route_table_id)
+    target_kwargs = {}
+    if target.startswith('nat-'):
+        target_kwargs['NatGatewayId'] = target
+    elif target.startswith('igw-'):
+        target_kwargs['GatewayId'] = target
+    elif target.startswith('eni-'):
+        target_kwargs['NetworkInterfaceId'] = target
+    elif target.startswith('i-'):
+        target_kwargs['InstanceId'] = target
+    else:
+        fatal("Unsupported route target: %s" % target)
+
+    for prefix in prefixes:
+        route_table.create_route(
+            DestinationCidrBlock=prefix['net'],
+            **target_kwargs,
+        )
+        print("ADDED: %s (%s)" % (prefix, target))
 
 def lambda_handler(event, context):
     try:
@@ -86,8 +108,16 @@ def lambda_handler(event, context):
         print('Environment variable SELECT must be set and be in a valid JSON format.', file=sys.stderr)
         raise
 
-    prefixes = select_prefixes(ip_ranges_url, select)
+    try:
+        route_table_id = os.environ['ROUTE_TABLE']
+        route_target = os.environ['ROUTE_TARGET']
+    except:
+        print('Environment variables [ROUTE_TABLE, ROUTE_TARGET] must be set.', file=sys.stderr)
+        raise
 
+    prefixes = select_prefixes(ip_ranges_url, select)
+    print("SELECTED: %d prefixes" % len(prefixes))
+    update_routes(route_table_id, prefixes, route_target)
 
 if __name__ == "__main__":
     lambda_handler({}, {})
