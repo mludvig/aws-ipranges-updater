@@ -19,7 +19,8 @@ JSON syntax:
 * SELECT = [
 	{
 		"region": "ap-southeast-2",
-		"services": [ "+AMAZON", "+EC2", "-S3" ] },
+		"services": [ "+AMAZON", "+EC2", "-S3" ]
+    },
 	{
 		"region": "us-east-1",
 		"services": [ "=AMAZON" ]

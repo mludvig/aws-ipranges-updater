@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: ip-ranges updater
+
+Globals:
+  Function:
+    Timeout: 15
+    AutoPublishAlias: live
+    DeploymentPreference:
+      Type: AllAtOnce
+
+Resources:
+  UpdaterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda
+      Handler: updater.lambda_handler
+      Runtime: python3.6
+      Tracing: Active
+      Environment:
+        Variables:
+          SELECT: '[{"region":"ap-southeast-2","services":["=AMAZON"]}]'
+          ROUTE_TABLE: !Ref RouteTable
+          #RT_TARGET: 
+
+  # Permit Lambda access to DynamoDB
+  UpdaterPermission:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: RouteTable
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+            - ec2:CreateRoute
+            - ec2:DeleteRoute
+            - ec2:ReplaceRoute
+            Resource: !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:route-table/${RouteTable}"
+          - Effect: Allow
+            Action: ec2:DescribeRouteTables
+            Resource: '*'
+
+      Roles:
+        - !Ref UpdaterFunctionRole  # Implicit IAM Role created with SAM
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: vpc-abc0d3cf
+
+Outputs:
+  UpdaterFunction:
+    Value: !GetAtt UpdaterFunction.Arn
+
+  RouteTable:
+    Value: !Ref RouteTable
+
+  RouteTableArn:
+    Value: !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:route-table/${RouteTable}"
