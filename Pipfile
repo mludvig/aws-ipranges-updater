@@ -1,0 +1,13 @@
+[[source]]
+name = "pypi"
+verify_ssl = true
+url = "https://pypi.org/simple"
+
+[dev-packages]
+httplib2 = "*"
+
+[packages]
+httplib2 = "*"
+
+[requires]
+python_version = "3.6"
