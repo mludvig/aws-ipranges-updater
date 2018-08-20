@@ -14,29 +14,7 @@ def fatal(message):
     print("ERROR: %s" % message, file=sys.stderr)
     sys.exit(1)
 
-def lambda_handler(event, context):
-    try:
-        # We expect SELECT value to be in this format:
-        # SELECT = [
-        #              {
-        #                  "region": "ap-southeast-2",
-        #                  "services": [ "+AMAZON", "+EC2", "-S3" ]
-        #              },
-        #              {
-        #                  "region": "us-east-1",
-        #                  "services": [ "=AMAZON" ]
-        #              }
-        #          ]
-
-        select_str = os.environ['SELECT']
-        select = json.loads(select_str)
-        # Try to access the minimum required attributes
-        # to trigger exception if the SELECT is invalid
-        _ = select[0]["region"] + select[0]["services"][0]
-    except:
-        print('Environment variable SELECT must be set and be in a valid JSON format.', file=sys.stderr)
-        raise
-
+def select_prefixes(ip_ranges_url, select):
     try:
         resp, content = Http().request(ip_ranges_url)
         if resp.status != 200:
@@ -60,6 +38,7 @@ def lambda_handler(event, context):
         else:
             pfx_dict[ip_prefix]['svc'].append(prefix['service'])
 
+    # Full prefix list
     prefixes = list(pfx_dict.values())
 
     _pfx = []
@@ -75,6 +54,7 @@ def lambda_handler(event, context):
             else:
                 # if none is specified assume '+'
                 op = '+'
+
             if op == '=':
                 # Select records that have ONLY this service
                 for prefix in prefixes:
@@ -91,7 +71,21 @@ def lambda_handler(event, context):
                     if prefix['rgn'] == region and service in prefix['svc']:
                         _pfx.append(prefix)
     prefixes = _pfx
-    print(prefixes)
+    print("SELECTED: %d prefixes" % len(prefixes))
+
+def lambda_handler(event, context):
+    try:
+        select_str = os.environ['SELECT']
+        select = json.loads(select_str)
+        # Try to access the minimum required attributes
+        # to trigger exception if the SELECT is invalid
+        _ = select[0]["region"] + select[0]["services"][0]
+    except:
+        print('Environment variable SELECT must be set and be in a valid JSON format.', file=sys.stderr)
+        raise
+
+    prefixes = select_prefixes(ip_ranges_url, select)
+
 
 if __name__ == "__main__":
     lambda_handler({}, {})
