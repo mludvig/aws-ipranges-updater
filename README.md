@@ -41,8 +41,8 @@ To update a _Route Table_ pass in these two variables:
 To update a _Security Group_ pass in these two variables:
 
 * SECURITY_GROUPS = sg-1234abcd, sg-abcd1234
-* SG_INGRESS = tcp/80, tcp/443
-* SG_EGRESS = tcp/443, udp/1234
+* SG_INGRESS_PORTS = tcp/80, tcp/443
+* SG_EGRESS_PORTS = tcp/443, udp/1234
 
 Permissions
 -----------

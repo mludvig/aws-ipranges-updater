@@ -2,9 +2,39 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Update RouteTable and/or SecurityGroup from ip-ranges.json
 
+Parameters:
+  SelectJson:
+    Type: String
+    Description: 'JSON string describing the values to select from ip-ranges.json, e.g. [{"region":"ap-southeast-2","services":["=AMAZON"]}]'
+
+  RouteTables:
+    Type: String
+    Description: Route Table Ids, e.g. rtb-1234abcd. Comma separate multiple values. Either RouteTable or SecurityGroup must be set.
+    Default: ""
+
+  RtTarget:
+    Type: String
+    Description: Routing target, e.g. NAT gateway (nat-...), EC2 instance (i-...), etc.
+    Default: ""
+
+  SecurityGroups:
+    Type: String
+    Description: Security Group Ids, e.g. sg-abcd1234. Comma separate multiple values. Either SecurityGroup or RouteTable must be set.
+    Default: ""
+
+  SgIngressPorts:
+    Type: String
+    Description: Ingress rules to add to the SecurityGroup(s), e.g. tcp/8080. Comma separate multiple values.
+    Default: ""
+
+  SgEgressPorts:
+    Type: String
+    Description: Egress rules to add to the SecurityGroup(s), e.g. tcp/443. Comma separate multiple values.
+    Default: ""
+
 Globals:
   Function:
-    Timeout: 15
+    Timeout: 60
 
 Resources:
   UpdaterFunction:
@@ -16,15 +46,17 @@ Resources:
       Tracing: Active
       Environment:
         Variables:
-          SELECT: '[{"region":"ap-southeast-2","services":["=AMAZON"]}]'
-          ROUTE_TABLE: !Ref RouteTable
-          #RT_TARGET: 
+          SELECT: !Ref SelectJson
+          ROUTE_TABLES: !Ref RouteTables
+          RT_TARGET: !Ref RtTarget
+          SECURITY_GROUPS: !Ref SecurityGroups
+          SG_INGRESS_PORTS: !Ref SgIngressPorts
+          SG_EGRESS_PORTS: !Ref SgEgressPorts
 
-  # Permit Lambda access to DynamoDB
-  UpdaterPermission:
+  UpdaterPolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: RouteTable
+      PolicyName: UpdaterPolicy
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -33,25 +65,21 @@ Resources:
             - ec2:CreateRoute
             - ec2:DeleteRoute
             - ec2:ReplaceRoute
-            Resource: !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:route-table/${RouteTable}"
+            Resource: !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:route-table/*"
           - Effect: Allow
             Action: ec2:DescribeRouteTables
             Resource: '*'
-
+          - Effect: Allow
+            Action:
+            - ec2:AuthorizeSecurityGroupEgress
+            - ec2:AuthorizeSecurityGroupIngress
+            Resource: !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*"
+          - Effect: Allow
+            Action: ec2:DescribeSecurityGroups
+            Resource: '*'
       Roles:
         - !Ref UpdaterFunctionRole  # Implicit IAM Role created with SAM
-
-  RouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: vpc-abc0d3cf
 
 Outputs:
   UpdaterFunction:
     Value: !GetAtt UpdaterFunction.Arn
-
-  RouteTable:
-    Value: !Ref RouteTable
-
-  RouteTableArn:
-    Value: !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:route-table/${RouteTable}"
