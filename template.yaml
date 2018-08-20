@@ -1,20 +1,17 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: ip-ranges updater
+Description: Update RouteTable and/or SecurityGroup from ip-ranges.json
 
 Globals:
   Function:
     Timeout: 15
-    AutoPublishAlias: live
-    DeploymentPreference:
-      Type: AllAtOnce
 
 Resources:
   UpdaterFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: lambda
-      Handler: updater.lambda_handler
+      CodeUri: ipranges_updater/build
+      Handler: lambda.lambda_handler
       Runtime: python3.6
       Tracing: Active
       Environment:

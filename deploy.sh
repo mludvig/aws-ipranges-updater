@@ -11,15 +11,16 @@ STACK_NAME=$(tr A-Z_ a-z- <<< ${PROJECT_NAME})
 PYLINT="pylint --output-format=colorized --disable invalid-name,missing-docstring,bad-whitespace,line-too-long"
 
 echo ==== FYI Only ====
-${PYLINT} --exit-zero lambda/updater.py
+${PYLINT} --exit-zero ${PROJECT_NAME}/lambda.py
 
 echo ==== Catching errors ====
-${PYLINT} -E lambda/updater.py
+${PYLINT} -E ${PROJECT_NAME}/lambda.py
 echo "OK: pylint passed"
 
 echo ==== Build and deploy ====
-#ln -fv ${PROJECT_NAME}/*.py ${PROJECT_NAME}/build/
-#make build SERVICE=${PROJECT_NAME}
+mkdir -p ${PROJECT_NAME}/build
+ln -fv ${PROJECT_NAME}/*.py ${PROJECT_NAME}/build/
+make build SERVICE=${PROJECT_NAME}
 
 aws --region ${REGION} cloudformation package --template-file template.yaml --output-template-file "${TEMPLATE_PK}" --s3-bucket "${S3_BUCKET}" --s3-prefix "${PROJECT_NAME}"
 
