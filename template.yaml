@@ -32,6 +32,11 @@ Parameters:
     Description: Egress rules to add to the SecurityGroup(s), e.g. tcp/443. Comma separate multiple values.
     Default: ""
 
+  IpRangesTopicArn:
+    Type: String
+    Description: The official SNS Topic where Amazon publishes new updates
+    Default: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged  # See https://docs.aws.amazon.com/general/latest/gr/aws-ip-ranges.html
+
 Globals:
   Function:
     Timeout: 60
@@ -79,6 +84,13 @@ Resources:
             Resource: '*'
       Roles:
         - !Ref UpdaterFunctionRole  # Implicit IAM Role created with SAM
+
+  UpdaterSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: lambda
+      Endpoint: !GetAtt UpdaterFunction.Arn
+      TopicArn: !Ref IpRangesTopicArn
 
 Outputs:
   UpdaterFunction:
