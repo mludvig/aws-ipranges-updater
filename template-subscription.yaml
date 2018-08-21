@@ -1,0 +1,20 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Subscribe Lambda function to ip-ranges SNS topic - must be done in us-east-1
+
+Parameters:
+  LambdaFunctionArn:
+    Type: String
+    Description: ARN of the lambda function to subscribe into IpRangesTopic
+
+  IpRangesTopicArn:
+    Type: String
+    Description: The official SNS Topic where Amazon publishes new updates
+    Default: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged  # See https://docs.aws.amazon.com/general/latest/gr/aws-ip-ranges.html
+
+Resources:
+  LambdaSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: lambda
+      Endpoint: !Ref LambdaFunctionArn
+      TopicArn: !Ref IpRangesTopicArn

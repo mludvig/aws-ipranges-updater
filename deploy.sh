@@ -33,3 +33,10 @@ aws --region ${REGION} cloudformation deploy --template-file "${TEMPLATE_PK}" --
 		${SECURITY_GROUPS:+SecurityGroups=${SECURITY_GROUPS}} \
 		${SG_INGRESS_PORTS:+SgIngressPorts=${SG_INGRESS_PORTS}} \
 		${SG_EGRESS_PORTS:+SgEgressPorts=${SG_EGRESS_PORTS}}
+
+LAMBDA_ARN=$(aws --region ${REGION} cloudformation describe-stacks --stack-name "${STACK_NAME}" | jq -r '.Stacks[0].Outputs[]|select(.OutputKey=="UpdaterFunction").OutputValue')
+
+# This must be done in us-east-1 because that's the SNS topic region!
+aws --region us-east-1 cloudformation deploy --template-file template-subscription.yaml --stack-name "${STACK_NAME}-subscription" \
+	--parameter-override \
+		LambdaFunctionArn=${LAMBDA_ARN}
