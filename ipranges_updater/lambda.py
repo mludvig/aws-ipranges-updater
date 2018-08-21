@@ -139,6 +139,10 @@ def split_and_check(param, pattern, helptext):
     return params
 
 def lambda_handler(event, context):
+    # Try to print the 'event', don't worry if none was supplied
+    if event:
+        print(event)
+
     try:
         select_str = os.environ['SELECT']
         select = json.loads(select_str)
