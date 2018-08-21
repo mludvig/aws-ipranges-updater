@@ -14,6 +14,7 @@ from httplib2 import Http
 ip_ranges_url = "https://ip-ranges.amazonaws.com/ip-ranges.json"
 
 ec2 = boto3.resource('ec2')
+ec2_client = boto3.client('ec2')    # Needed for replace_route() :(
 
 def fatal(message):
     print("ERROR: %s" % message, file=sys.stderr)
@@ -80,29 +81,38 @@ def select_prefixes(ip_ranges_url, select):
     return prefixes
 
 def update_routes(route_table_id, prefixes, target):
-    route_table = ec2.RouteTable(route_table_id)
-    target_kwargs = {}
     if target.startswith('nat-'):
-        target_kwargs['NatGatewayId'] = target
+        arg_name = 'NatGatewayId'
     elif target.startswith('igw-'):
-        target_kwargs['GatewayId'] = target
+        arg_name = 'GatewayId'
     elif target.startswith('eni-'):
-        target_kwargs['NetworkInterfaceId'] = target
+        arg_name = 'NetworkInterfaceId'
     elif target.startswith('i-'):
-        target_kwargs['InstanceId'] = target
+        arg_name = 'InstanceId'
     else:
         fatal("Unsupported route target: %s" % target)
 
+    route_table = ec2.RouteTable(route_table_id)
+    target_kwargs = { arg_name: target }
     for prefix in prefixes:
-        try:
-            route_table.create_route(
+        existing_route = [route for route in route_table.routes_attribute if route.get('DestinationCidrBlock') == prefix['net']]
+        if existing_route:
+            if existing_route[0][arg_name] == target:
+                continue    # The same route already exists
+            else:
+                ec2_client.replace_route(
+                    RouteTableId=route_table_id,
+                    DestinationCidrBlock=prefix['net'],
+                    **target_kwargs,
+                )
+                print("REPLACED: %s %s %s was: %r" % (route_table_id, target, prefix['net'], existing_route[0]))
+        else:
+            ec2_client.create_route(
+                RouteTableId=route_table_id,
                 DestinationCidrBlock=prefix['net'],
                 **target_kwargs,
             )
             print("ADDED: %s %s %s" % (route_table_id, target, prefix['net']))
-        except ClientError as e:
-            if e.response['Error']['Code'] != 'RouteAlreadyExists':
-                raise
 
 def update_secgroup(security_group_id, prefixes, sg_ingress_ports, sg_egress_ports):
     def _insert_rule(label, func, portspec, prefix):
@@ -132,6 +142,8 @@ def split_and_check(param, pattern, helptext):
     '''
     Split the supplied 'param' by commas, strip whitespaces and check against regexp pattern.
     '''
+    if not param:
+        return []
     params = [ x.strip() for x in param.split(',') ]
     for p in params:
         if not re.match(pattern, p):
@@ -153,34 +165,37 @@ def lambda_handler(event, context):
         print('Environment variable $SELECT must be set and be in a valid JSON format.', file=sys.stderr)
         raise
 
-    route_table_ids = os.environ.get('ROUTE_TABLES')
+    route_tables = os.environ.get('ROUTE_TABLES')
     rt_target = os.environ.get('RT_TARGET')
-    security_group_ids = os.environ.get('SECURITY_GROUPS')
+    security_groups = os.environ.get('SECURITY_GROUPS')
     sg_ingress_ports = os.environ.get('SG_INGRESS_PORTS')
     sg_egress_ports = os.environ.get('SG_EGRESS_PORTS')
 
-    if not route_table_ids and not security_group_ids:
-        fatal('Environment variables $ROUTE_TABLES and/or $SECURITY_GROUPS must be set.')
+    if not route_tables and not security_groups:
+        fatal('Environment variables $ROUTE_TABLES and/or $SECURITY_GROUPS must be set')
 
-    if route_table_ids and not rt_target:
+    if route_tables and not rt_target:
         fatal('Environment variable $RT_TARGET must be set along with $ROUTE_TABLES')
 
-    if security_group_ids and not sg_ingress_ports and not sg_egress_ports:
+    if security_groups and not sg_ingress_ports and not sg_egress_ports:
         fatal('Environment variables $SG_INGRESS_PORTS and/or $SG_EGRESS_PORTS must be set along with $SECURITY_GROUPS')
 
     # Split and normalise the inputs
-    route_table_ids = split_and_check(route_table_ids, 'rtb-[0-9a-z]+', 'Invalid $ROUTE_TABLES member format, must be rtb-abcd1234')
-    rt_target = rt_target.strip()
-    security_group_ids = split_and_check(security_group_ids, 'sg-[0-9a-z]+', 'Invalid $SECURITY_GROUPS member format, must be sg-abcd1234')
+    route_tables = split_and_check(route_tables, 'rtb-[0-9a-z]+', 'Invalid $ROUTE_TABLES member format, must be rtb-abcd1234')
+    rt_target = split_and_check(rt_target, '[a-z]+-', 'Invalid $RT_TARGET, must be a NAT ID, IGW ID, VGW ID, EC2 instance ID, etc')
+    security_groups = split_and_check(security_groups, 'sg-[0-9a-z]+', 'Invalid $SECURITY_GROUPS member format, must be sg-abcd1234')
     sg_ingress_ports = split_and_check(sg_ingress_ports, '[a-z]+/[0-9]+', 'Invalid $SG_INGRESS_PORTS member format, must be tcp/1234 or udp/1234')
     sg_egress_ports = split_and_check(sg_egress_ports, '[a-z]+/[0-9]+', 'Invalid $SG_EGRESS_PORTS member format, must be tcp/1234 or udp/1234')
 
+    if len(rt_target) > 1:
+        fatal('Environment variable $RT_TARGET must have only one target, not a list')
+
     prefixes = select_prefixes(ip_ranges_url, select)
     print("SELECTED: %d prefixes" % len(prefixes))
-    for rt_id in route_table_ids:
-        update_routes(rt_id, prefixes, rt_target)
+    for rt_id in route_tables:
+        update_routes(rt_id, prefixes, rt_target[0])
 
-    for sg_id in security_group_ids:
+    for sg_id in security_groups:
         update_secgroup(sg_id, prefixes, sg_ingress_ports, sg_egress_ports)
 
 if __name__ == "__main__":
