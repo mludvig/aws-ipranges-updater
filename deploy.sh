@@ -28,8 +28,8 @@ aws --region ${REGION} cloudformation package --template-file template.yaml --ou
 aws --region ${REGION} cloudformation deploy --template-file "${TEMPLATE_PK}" --stack-name "${STACK_NAME}" --capabilities CAPABILITY_IAM \
 	--parameter-override \
 		SelectJson='[{"region":"ap-southeast-2","services":["=AMAZON"]}]' \
-		${RouteTables:+RouteTables=${RouteTables}} \
-		${RtTarget:+RtTarget=${RtTarget}} \
-		${SecurityGroups:+SecurityGroups=${SecurityGroups}} \
-		${SgIngressPorts:+SgIngressPorts=${SgIngressPorts}} \
-		${SgEgressPorts:+SgEgressPorts=${SgEgressPorts}}
+		${ROUTE_TABLES:+RouteTables=${ROUTE_TABLES}} \
+		${RT_TARGET:+RtTarget=${RT_TARGET}} \
+		${SECURITY_GROUPS:+SecurityGroups=${SECURITY_GROUPS}} \
+		${SG_INGRESS_PORTS:+SgIngressPorts=${SG_INGRESS_PORTS}} \
+		${SG_EGRESS_PORTS:+SgEgressPorts=${SG_EGRESS_PORTS}}

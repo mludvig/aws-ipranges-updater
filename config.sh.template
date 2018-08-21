@@ -1,9 +1,12 @@
-## Fill in your values!
-S3_BUCKET=cf-templates-something-ap-southeast-2
+## Fill in your own values
+
+# Writable S3 bucket, one of the cf-templates-* may be a good choice
+S3_BUCKET="cf-templates-something-ap-southeast-2"
 
 # Specify RouteTables and/or SecurityGroups
-RouteTables=rtb-xyz123xyz
-RtTarget=nat-abcd0987
-SecurityGroups=sg-12341234
-SgIngressPorts=tcp/1234,udp/1234
-SgEgressPorts=tcp/443
+ROUTE_TABLES="rtb-xyz123xyz"
+RT_TARGET="nat-abcd0987"
+
+SECURITY_GROUPS="sg-12341234"
+SG_INGRESS_PORTS="tcp/1234,udp/1234"
+SG_EGRESS_PORTS="tcp/443"
