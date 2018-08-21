@@ -1,5 +1,8 @@
 ## Fill in your own values
 
+# Select filter
+SELECT_JSON='[{"region":"ap-southeast-2","services":["=AMAZON"]}]'
+
 # Writable S3 bucket, one of the cf-templates-* may be a good choice
 S3_BUCKET="cf-templates-something-ap-southeast-2"
 

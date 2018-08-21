@@ -27,7 +27,7 @@ aws --region ${REGION} cloudformation package --template-file template.yaml --ou
 
 aws --region ${REGION} cloudformation deploy --template-file "${TEMPLATE_PK}" --stack-name "${STACK_NAME}" --capabilities CAPABILITY_IAM \
 	--parameter-override \
-		SelectJson='[{"region":"ap-southeast-2","services":["=AMAZON"]}]' \
+		SelectJson=${SELECT_JSON} \
 		${ROUTE_TABLES:+RouteTables=${ROUTE_TABLES}} \
 		${RT_TARGET:+RtTarget=${RT_TARGET}} \
 		${SECURITY_GROUPS:+SecurityGroups=${SECURITY_GROUPS}} \
@@ -38,5 +38,4 @@ LAMBDA_ARN=$(aws --region ${REGION} cloudformation describe-stacks --stack-name 
 
 # This must be done in us-east-1 because that's the SNS topic region!
 aws --region us-east-1 cloudformation deploy --template-file template-subscription.yaml --stack-name "${STACK_NAME}-subscription" \
-	--parameter-override \
-		LambdaFunctionArn=${LAMBDA_ARN}
+	--parameter-override LambdaFunctionArn=${LAMBDA_ARN} || true
