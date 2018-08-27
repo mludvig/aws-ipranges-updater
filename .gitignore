@@ -1,2 +1,4 @@
 template.packaged.yaml
 .*.swp
+*/build/
+config.sh
