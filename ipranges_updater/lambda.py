@@ -65,17 +65,20 @@ def select_prefixes(ip_ranges_url, select):
                 # Select records that have ONLY this service
                 for prefix in prefixes:
                     if prefix['rgn'] == region and service in prefix['svc'] and len(prefix['svc']) == 1:
-                        _pfx.append(prefix)
+                        if not _pfx.count(prefix):
+                            _pfx.append(prefix)
             elif op == '-':
                 # Exclude this service
                 for prefix in prefixes:
                     if prefix['rgn'] == region and service not in prefix['svc']:
-                        _pfx.append(prefix)
+                        if not _pfx.count(prefix):
+                            _pfx.append(prefix)
             else:
                 # Include this service
                 for prefix in prefixes:
                     if prefix['rgn'] == region and service in prefix['svc']:
-                        _pfx.append(prefix)
+                        if not _pfx.count(prefix):
+                            _pfx.append(prefix)
     prefixes = _pfx
 
     return prefixes
