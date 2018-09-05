@@ -8,6 +8,7 @@ import sys
 import re
 import json
 import boto3
+import socket
 from botocore.exceptions import ClientError
 from httplib2 import Http
 
@@ -48,6 +49,7 @@ def select_prefixes(ip_ranges_url, select):
     prefixes = list(pfx_dict.values())
 
     _pfx = []
+    services_exclude = []
     for select_one in select:
         region = select_one['region']
         services = select_one['services']
@@ -68,18 +70,28 @@ def select_prefixes(ip_ranges_url, select):
                         if not _pfx.count(prefix):
                             _pfx.append(prefix)
             elif op == '-':
-                # Exclude this service
-                for prefix in prefixes:
-                    if prefix['rgn'] == region and service not in prefix['svc']:
-                        if not _pfx.count(prefix):
-                            _pfx.append(prefix)
+                # Process exclusions later
+                services_exclude.append({'region': region, 'service': service})
             else:
                 # Include this service
                 for prefix in prefixes:
                     if prefix['rgn'] == region and service in prefix['svc']:
                         if not _pfx.count(prefix):
                             _pfx.append(prefix)
+
     prefixes = _pfx
+    _pfx = []
+    for exclude in services_exclude:
+        region = exclude['region']
+        service = exclude['service']
+        for prefix in prefixes:
+            if prefix['rgn'] == region and service not in prefix['svc']:
+                if not _pfx.count(prefix):
+                    _pfx.append(prefix)
+
+    prefixes = _pfx
+    # Order the prefixes
+    prefixes = sorted(prefixes, key = lambda x: socket.inet_aton(x['net'].split('/')[0]))
 
     return prefixes
 
@@ -165,7 +177,7 @@ def lambda_handler(event, context):
         # to trigger exception if the SELECT is invalid
         _ = select[0]["region"] + select[0]["services"][0]
     except:
-        print('Environment variable $SELECT must be set and be in a valid JSON format.', file=sys.stderr)
+        print('Environment variable $SELECT must be set and be in a valid JSON format.\n', file=sys.stderr)
         raise
 
     route_tables = os.environ.get('ROUTE_TABLES')
@@ -173,9 +185,11 @@ def lambda_handler(event, context):
     security_groups = os.environ.get('SECURITY_GROUPS')
     sg_ingress_ports = os.environ.get('SG_INGRESS_PORTS')
     sg_egress_ports = os.environ.get('SG_EGRESS_PORTS')
+    test_only = os.environ.get('TEST_ONLY') in [ '1', 'yes', 'true' ]
 
     if not route_tables and not security_groups:
-        fatal('Environment variables $ROUTE_TABLES and/or $SECURITY_GROUPS must be set')
+        print('Environment variables $ROUTE_TABLES and/or $SECURITY_GROUPS should be set. Running in TEST_ONLY=yes mode.', file=sys.stderr)
+        test_only = True
 
     if route_tables and not rt_target:
         fatal('Environment variable $RT_TARGET must be set along with $ROUTE_TABLES')
@@ -195,11 +209,17 @@ def lambda_handler(event, context):
 
     prefixes = select_prefixes(ip_ranges_url, select)
     print("SELECTED: %d prefixes" % len(prefixes))
-    for rt_id in route_tables:
-        update_routes(rt_id, prefixes, rt_target[0])
 
-    for sg_id in security_groups:
-        update_secgroup(sg_id, prefixes, sg_ingress_ports, sg_egress_ports)
+    if test_only:
+        for prefix in prefixes:
+            svcs = " ".join(prefix['svc'])
+            print("{net:20}   {rgn:20}   {svcs}".format(**prefix, svcs=svcs))
+    else:
+        for rt_id in route_tables:
+            update_routes(rt_id, prefixes, rt_target[0])
+
+        for sg_id in security_groups:
+            update_secgroup(sg_id, prefixes, sg_ingress_ports, sg_egress_ports)
 
 if __name__ == "__main__":
     lambda_handler({}, {})
