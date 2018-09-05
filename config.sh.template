@@ -1,4 +1,8 @@
 ## Fill in your own values
+# Account info
+export AWS_DEFAULT_PROFILE="some-aws-account"
+export AWS_DEFAULT_REGION="ap-southeast-2"
+
 
 # Select filter
 SELECT_JSON='[{"region":"ap-southeast-2","services":["=AMAZON"]}]'
@@ -6,7 +10,7 @@ SELECT_JSON='[{"region":"ap-southeast-2","services":["=AMAZON"]}]'
 # Writable S3 bucket, one of the cf-templates-* may be a good choice
 S3_BUCKET="cf-templates-something-ap-southeast-2"
 
-# Specify RouteTables and/or SecurityGroups
+# Specify RouteTables and/or SecurityGroups, comment out what's not needed
 ROUTE_TABLES="rtb-xyz123xyz"
 RT_TARGET="nat-abcd0987"
 
