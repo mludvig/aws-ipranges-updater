@@ -44,6 +44,23 @@ To update a _Security Group_ pass in these two variables:
 * SG_INGRESS_PORTS = tcp/80, tcp/443
 * SG_EGRESS_PORTS = tcp/443, udp/1234
 
+Deployment
+----------
+
+The `deploy.sh` script and the _CloudFormation_ `template.yaml` use
+_AWS SAM_ (Serverless Application Model) and `aws cloudformation deploy` command.
+
+To use the provided deploy script first copy `config.sh.template`
+to `config.sh` and fill in your settings.
+
+Then run `./deploy.sh` and wait.
+
+There will be 2 stacks deployed
+
+1. One in your actual region (e.g. _ap-southeast-2_) with the Lambda, permissions, etc.
+
+2. SNS Subscription stack in _us-east-1_ (yes it must be in _us-east-1_ because that's where the AWS SNS topic where Amazon publishes the updates is).
+
 Permissions
 -----------
 
