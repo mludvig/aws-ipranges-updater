@@ -1,5 +1,5 @@
-ip-ranges RT/SG updater
-=======================
+ip-ranges RouteTable / SecurityGroup updater
+============================================
 
 Lambda function that updates the list of CIDRs in a given AWS Route Table
 or Security Group with prefixes obtained from:
@@ -16,7 +16,8 @@ Configuration parameters are passed to the function as environment variables.
 To select certain prefixes from ip-ranges.json use the following
 JSON syntax:
 
-* SELECT = [
+```
+SELECT = [
 	{
 		"region": "ap-southeast-2",
 		"services": [ "+AMAZON", "+EC2", "-S3" ]
@@ -26,6 +27,7 @@ JSON syntax:
 		"services": [ "=AMAZON" ]
 	}
 ]
+```
 
 The above filter will select prefixes from `ap-southeast-2` that
 have either `AMAZON` or `EC2` service but _not_ `S3` service.
@@ -38,7 +40,7 @@ To update a _Route Table_ pass in these two variables:
 * ROUTE_TABLES = rtb-12345678, rtb-abcdefgh
 * RT_TARGET = igw-..., nat-..., vgw-...
 
-To update a _Security Group_ pass in these two variables:
+To update a _Security Group_ pass in these variables:
 
 * SECURITY_GROUPS = sg-1234abcd, sg-abcd1234
 * SG_INGRESS_PORTS = tcp/80, tcp/443
