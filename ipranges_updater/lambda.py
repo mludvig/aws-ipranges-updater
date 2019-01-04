@@ -10,9 +10,11 @@ import json
 import boto3
 import socket
 from botocore.exceptions import ClientError
-from httplib2 import Http
+from http.client import HTTPSConnection
+from urllib.parse import urlparse
 
 ip_ranges_url = "https://ip-ranges.amazonaws.com/ip-ranges.json"
+parsed_url = urlparse(ip_ranges_url)
 
 ec2 = boto3.resource('ec2')
 ec2_client = boto3.client('ec2')    # Needed for replace_route() :(
@@ -21,12 +23,15 @@ def fatal(message):
     print("ERROR: %s" % message, file=sys.stderr)
     sys.exit(1)
 
-def select_prefixes(ip_ranges_url, select):
+def select_prefixes(select):
     try:
-        resp, content = Http().request(ip_ranges_url)
+        conn = HTTPSConnection(parsed_url.netloc)
+        conn.connect()
+        conn.request(method='GET', url=parsed_url.path)
+        resp = conn.getresponse()
         if resp.status != 200:
             fatal("Unable to load %s - %d %s" % (ip_ranges_url, resp.status, resp.reason))
-        content = content.decode('latin1')
+        content = resp.read()
         ipranges = json.loads(content)
     except Exception as e:
         fatal("Unable to load %s - %s" % (ip_ranges_url, e))
@@ -207,7 +212,7 @@ def lambda_handler(event, context):
     if len(rt_target) > 1:
         fatal('Environment variable $RT_TARGET must have only one target, not a list')
 
-    prefixes = select_prefixes(ip_ranges_url, select)
+    prefixes = select_prefixes(select)
     print("SELECTED: %d prefixes" % len(prefixes))
 
     if test_only:
