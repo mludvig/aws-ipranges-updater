@@ -32,6 +32,11 @@ Parameters:
     Description: Egress rules to add to the SecurityGroup(s), e.g. tcp/443. Comma separate multiple values.
     Default: ""
 
+  ReCheckExpr:
+    Type: String
+    Description: When should the Lambda run to re-check ip-ranges.json (CloudWatch Events Rule expression syntax)
+    Default: rate(1 day)
+
 Globals:
   Function:
     Timeout: 60
@@ -78,6 +83,23 @@ Resources:
             Resource: '*'
       Roles:
         - !Ref UpdaterFunctionRole  # Implicit IAM Role created with SAM
+
+  UpdaterScheduler:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Trigger for UpdaterFunction
+      ScheduleExpression: !Ref ReCheckExpr
+      Targets:
+      - Arn: !GetAtt UpdaterFunction.Arn
+        Id: UpdaterFunction_Target
+
+  UpdaterSchedulerPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref UpdaterFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt UpdaterScheduler.Arn
 
 Outputs:
   UpdaterFunction:
