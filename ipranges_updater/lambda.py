@@ -7,11 +7,12 @@ import os
 import sys
 import re
 import json
-import boto3
 import socket
-from botocore.exceptions import ClientError
 from http.client import HTTPSConnection
 from urllib.parse import urlparse
+
+import boto3                                    # pylint: disable=import-error
+from botocore.exceptions import ClientError     # pylint: disable=import-error
 
 ip_ranges_url = "https://ip-ranges.amazonaws.com/ip-ranges.json"
 parsed_url = urlparse(ip_ranges_url)

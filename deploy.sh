@@ -18,10 +18,6 @@ ${PYLINT} -E ${PROJECT_NAME}/lambda.py
 echo "OK: pylint passed"
 
 echo ==== Build and deploy ====
-mkdir -p ${PROJECT_NAME}/build
-ln -fv ${PROJECT_NAME}/*.py ${PROJECT_NAME}/build/
-make build SERVICE=${PROJECT_NAME}
-
 aws cloudformation package --template-file template.yaml --output-template-file "${TEMPLATE_PK}" --s3-bucket "${S3_BUCKET}" --s3-prefix "${PROJECT_NAME}"
 
 aws cloudformation deploy --template-file "${TEMPLATE_PK}" --stack-name "${STACK_NAME}" --capabilities CAPABILITY_IAM \
