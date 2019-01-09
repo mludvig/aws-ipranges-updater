@@ -39,7 +39,7 @@ Parameters:
 
 Globals:
   Function:
-    Timeout: 60
+    Timeout: 300
 
 Resources:
   UpdaterFunction:
@@ -100,6 +100,12 @@ Resources:
       FunctionName: !Ref UpdaterFunction
       Principal: events.amazonaws.com
       SourceArn: !GetAtt UpdaterScheduler.Arn
+
+  UpdaterLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${UpdaterFunction}"
+      RetentionInDays: 14
 
 Outputs:
   UpdaterFunction:
