@@ -34,7 +34,7 @@ Parameters:
 
 Globals:
   Function:
-    Timeout: 60
+    Timeout: 300
 
 Resources:
   UpdaterFunction:
@@ -78,6 +78,12 @@ Resources:
             Resource: '*'
       Roles:
         - !Ref UpdaterFunctionRole  # Implicit IAM Role created with SAM
+
+  UpdaterLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${UpdaterFunction}"
+      RetentionInDays: 14
 
 Outputs:
   UpdaterFunction:
