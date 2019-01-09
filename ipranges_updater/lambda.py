@@ -172,10 +172,6 @@ def split_and_check(param, pattern, helptext):
     return params
 
 def lambda_handler(event, context):
-    # Try to print the 'event', don't worry if none was supplied
-    if event:
-        print(event)
-
     try:
         select_str = os.environ['SELECT']
         select = json.loads(select_str)
@@ -228,4 +224,9 @@ def lambda_handler(event, context):
             update_secgroup(sg_id, prefixes, sg_ingress_ports, sg_egress_ports)
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description = "Test ip-ranges.json $SELECT statement")
+    parser.add_argument("--json", required=True, help="JSON used for Lambda's SELECT statement. Must be in form [{\"region\":\"...\",\"services\":[\"...\",\"...\"]}]")
+    args = parser.parse_args()
+    os.environ['SELECT'] = args.json
     lambda_handler({}, {})
