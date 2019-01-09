@@ -1,4 +1,4 @@
-#!/bin/bash -xeu
+#!/bin/bash -eu
 
 PROJECT_NAME="ipranges_updater"
 
@@ -23,6 +23,7 @@ else
 fi
 
 echo ==== Build and deploy ====
+set -x
 aws cloudformation package --template-file template.yaml --output-template-file "${TEMPLATE_PK}" --s3-bucket "${S3_BUCKET}" --s3-prefix "${PROJECT_NAME}"
 
 aws cloudformation deploy --template-file "${TEMPLATE_PK}" --stack-name "${STACK_NAME}" --capabilities CAPABILITY_IAM \
