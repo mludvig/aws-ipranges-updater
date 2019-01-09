@@ -5,17 +5,22 @@ PROJECT_NAME="ipranges_updater"
 source config.sh	# See config.sh.template
 
 S3_PREFIX="${PROJECT_NAME}"
-TEMPLATE_PK="template.packaged.yaml"
+TEMPLATE_PK=".template.packaged.yaml"
 STACK_NAME=$(tr A-Z_ a-z- <<< ${PROJECT_NAME})
 
-PYLINT="pylint --output-format=colorized --disable invalid-name,missing-docstring,bad-whitespace,line-too-long"
+PYLINT="pylint"
+PYLINT_CMD="${PYLINT} --output-format=colorized --disable invalid-name,missing-docstring,bad-whitespace,line-too-long"
 
-echo ==== FYI Only ====
-${PYLINT} --exit-zero ${PROJECT_NAME}/lambda.py
+if which ${PYLINT} > /dev/null; then
+	echo ==== FYI Only ====
+	${PYLINT_CMD} --exit-zero ${PROJECT_NAME}/lambda.py
 
-echo ==== Catching errors ====
-${PYLINT} -E ${PROJECT_NAME}/lambda.py
-echo "OK: pylint passed"
+	echo ==== Catching errors ====
+	${PYLINT_CMD} -E ${PROJECT_NAME}/lambda.py
+	echo "OK: pylint passed"
+else
+	echo !!! ${PYLINT} command is not available, skipping checks !!!
+fi
 
 echo ==== Build and deploy ====
 aws cloudformation package --template-file template.yaml --output-template-file "${TEMPLATE_PK}" --s3-bucket "${S3_BUCKET}" --s3-prefix "${PROJECT_NAME}"

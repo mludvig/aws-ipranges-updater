@@ -1,4 +1,4 @@
-template.packaged.yaml
+.template.packaged.yaml
 .*.swp
 */build/
 config.sh
