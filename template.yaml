@@ -45,8 +45,8 @@ Resources:
   UpdaterFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ipranges_updater/lambda.py
-      Handler: lambda.lambda_handler
+      CodeUri: ipranges_updater/index.py
+      Handler: index.lambda_handler
       Runtime: python3.6
       Environment:
         Variables:
