@@ -15,7 +15,6 @@ import boto3                                    # pylint: disable=import-error
 from botocore.exceptions import ClientError     # pylint: disable=import-error
 
 ip_ranges_url = "https://ip-ranges.amazonaws.com/ip-ranges.json"
-parsed_url = urlparse(ip_ranges_url)
 
 ec2 = boto3.resource('ec2')
 ec2_client = boto3.client('ec2')    # Needed for replace_route() :(
@@ -24,22 +23,32 @@ def fatal(message):
     print("ERROR: %s" % message, file=sys.stderr)
     sys.exit(1)
 
-def select_prefixes(select):
-    try:
-        conn = HTTPSConnection(parsed_url.netloc)
-        conn.connect()
-        conn.request(method='GET', url=parsed_url.path)
-        resp = conn.getresponse()
-        if resp.status != 200:
-            fatal("Unable to load %s - %d %s" % (ip_ranges_url, resp.status, resp.reason))
-        content = resp.read()
-        ipranges = json.loads(content)
-    except Exception as e:
-        fatal("Unable to load %s - %s" % (ip_ranges_url, e))
+def get_ipranges(ipranges_location):
+    if ipranges_location.startswith("http://") or ipranges_location.startswith("https://"):
+        # URL location
+        try:
+            parsed_url = urlparse(ipranges_location)
+            conn = HTTPSConnection(parsed_url.netloc)
+            conn.connect()
+            conn.request(method='GET', url=parsed_url.path)
+            resp = conn.getresponse()
+            if resp.status != 200:
+                fatal("Unable to load %s - %d %s" % (ip_ranges_url, resp.status, resp.reason))
+            content = resp.read()
+        except Exception as e:
+            fatal("Unable to load %s - %s" % (ip_ranges_url, e))
+    else:
+        # Local file
+        with open(ipranges_location, "rt") as f:
+            content = f.read()
 
+    ipranges = json.loads(content)
     if 'prefixes' not in ipranges or not ipranges['prefixes']:
         fatal("No prefixes found")
 
+    return ipranges
+
+def select_prefixes(ipranges, select):
     pfx_dict = {}
     for prefix in ipranges['prefixes']:
         ip_prefix = prefix['ip_prefix']
@@ -176,8 +185,7 @@ def lambda_handler(event, context):
         # to trigger exception if the SELECT is invalid
         _ = select[0]["region"] + select[0]["services"][0]
     except:
-        print('Environment variable $SELECT must be set and be in a valid JSON format.\n', file=sys.stderr)
-        raise
+        fatal('Environment variable $SELECT must be set and be in a valid JSON format.')
 
     route_tables = os.environ.get('ROUTE_TABLES')
     rt_target = os.environ.get('RT_TARGET')
@@ -206,7 +214,8 @@ def lambda_handler(event, context):
     if len(rt_target) > 1:
         fatal('Environment variable $RT_TARGET must have only one target, not a list')
 
-    prefixes = select_prefixes(select)
+    ipranges = get_ipranges(ip_ranges_url)
+    prefixes = select_prefixes(ipranges, select)
     print("SELECTED: %d prefixes" % len(prefixes))
 
     if test_only:
@@ -223,7 +232,8 @@ def lambda_handler(event, context):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description = "Test ip-ranges.json $SELECT statement")
-    parser.add_argument("--json", required=True, help="JSON used for Lambda's SELECT statement. Must be in form [{\"region\":\"...\",\"services\":[\"...\",\"...\"]}]")
+    parser.add_argument("--select", required=True, help="JSON used for Lambda's SELECT statement. Must be in form [{\"region\":\"...\",\"services\":[\"...\",\"...\"]}]")
     args = parser.parse_args()
-    os.environ['SELECT'] = args.json
+    print(args.select)
+    os.environ['SELECT'] = args.select
     lambda_handler({}, {})
