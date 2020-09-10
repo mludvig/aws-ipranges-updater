@@ -1,0 +1,42 @@
+---
+
+select: '[{"region": "ap-southeast-2", "services": [ "=AMAZON" ]}]'
+expect:
+  count: 32
+  present:
+  - "15.230.23.0/24"  # AMAZON
+  not_present:
+  - "13.210.0.0/15"   # AMAZON, EC2
+  - "52.95.0.0/20"    # us-east-2
+
+---
+
+select: '[{"region": "ap-southeast-2", "services": [ "=EC2" ]}]'
+expect:
+  count: 0            # They are always at least AMAZON and EC2
+  not_present:
+  - "13.210.0.0/15"   # AMAZON, EC2
+  - "15.177.83.0/24"  # AMAZON, EC2, ROUTE53_HEALTHCHECKS_PUBLISHING
+  - "52.95.0.0/20"    # us-east-2
+---
+
+select: '[{"region": "ap-southeast-2", "services": [ "EC2" ]}]'
+expect:
+  count: 25
+  present:
+  - "13.210.0.0/15"   # AMAZON, EC2
+  - "15.177.83.0/24"  # AMAZON, EC2, ROUTE53_HEALTHCHECKS_PUBLISHING
+  not_present:
+  - "15.230.23.0/24"  # AMAZON
+  - "52.95.0.0/20"    # us-east-2
+
+---
+
+select: '[{"region": "ap-southeast-2", "services": [ "EC2", "-ROUTE53_HEALTHCHECKS_PUBLISHING" ]}]'
+expect:
+  count: 24
+  present:
+  - "13.210.0.0/15"   # AMAZON, EC2
+  not_present:
+  - "15.177.83.0/24"  # AMAZON, EC2, ROUTE53_HEALTHCHECKS_PUBLISHING
+  - "52.95.0.0/20"    # us-east-2
