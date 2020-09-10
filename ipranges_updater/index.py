@@ -86,16 +86,13 @@ def select_prefixes(select):
                             _pfx.append(prefix)
 
     prefixes = _pfx
-    _pfx = []
     for exclude in services_exclude:
         region = exclude['region']
         service = exclude['service']
-        for prefix in prefixes:
-            if prefix['rgn'] == region and service not in prefix['svc']:
-                if not _pfx.count(prefix):
-                    _pfx.append(prefix)
+        for prefix in _pfx:
+            if prefix['rgn'] == region and service in prefix['svc']:
+                prefixes.remove(prefix)
 
-    prefixes = _pfx
     # Order the prefixes
     prefixes = sorted(prefixes, key = lambda x: socket.inet_aton(x['net'].split('/')[0]))
 
