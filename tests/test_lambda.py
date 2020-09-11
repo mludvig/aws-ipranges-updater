@@ -46,7 +46,7 @@ def test_get_ipranges_local():
     ipranges = index.get_ipranges(ipranges_location)
     assert "createDate" in ipranges
 
-@pytest.mark.parametrize("test_case", load_test_cases("tests/select-test-cases.yaml"))
+@pytest.mark.parametrize("test_case", load_test_cases("tests/select-test-cases.yaml"), ids=str)
 def test_select_prefixes(test_case):
     ipranges = index.get_ipranges(ipranges_location)
     prefixes = index.select_prefixes(ipranges, json.loads(test_case.select))
